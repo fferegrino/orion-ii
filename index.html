@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Timestamp Viewer</title>
+    <style>
+        .container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .video-container {
+            flex: 4;
+        }
+
+        .timestamps {
+            flex: 1;
+            max-height: 800px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+
+        .timestamp-item {
+            padding: 8px;
+            margin: 5px 0;
+            cursor: pointer;
+            background-color: white;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .timestamp-item.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .timestamp-item:hover {
+            background-color: #e0e0e0;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <!-- https://www.youtube.com/watch?v=MyxAC80XzCA&t=680s -->
+    <div class="container">
+        <div class="video-container">
+            <iframe id="youtube-player" width="100%" height="800" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+            </iframe>
+            <div class="toast" id="toast"></div>
+        </div>
+        <div class="timestamps">
+            <!-- Timestamps will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Load YouTube API
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        const scrollSpeed = 0.033 * 3;
+
+        // Video helper class
+        class VideoData {
+            constructor(videoId, title, startOffset = 0, playOffset = 7) {
+                this.videoId = videoId;
+                this.title = title;
+                this.startOffset = startOffset;
+                this.playOffset = playOffset;
+                this.timestamps = [];
+            }
+
+            addTimestamp(time, description, additionalOffset = 0) {
+                // If time is decimal, the integer part is the minutes and the decimal part is the seconds
+                const minutes = Math.floor(time);
+                const seconds = Math.round((time - minutes) * 100); 
+                this.timestamps.push({
+                    time: minutes * 60 + seconds + this.startOffset - (this.playOffset + additionalOffset),
+                    description: description
+                });
+            }
+
+            getEmbedUrl() {
+                return `https://www.youtube.com/embed/${this.videoId}?enablejsapi=1&disablekb=1&start=${this.startOffset}`;
+            }
+        }
+
+        // Create video instance
+        const video = new VideoData(
+            'MyxAC80XzCA',  // video ID
+            'My Video Title',  // title
+            290  // start offset in seconds
+        );
+
+        // Add timestamps relative to video start
+        video.addTimestamp(0, "Inicia el partido");
+        video.addTimestamp(1.19, "Primer gol (1-0)");
+        video.addTimestamp(1.4, "Max la caga");
+        video.addTimestamp(2.43, "Segundo gol (2-0)");
+        video.addTimestamp(4.32, "Gol en contra (2-1)", 1);
+        video.addTimestamp(7.5, "Penal fallado");
+        video.addTimestamp(9.35, "Atajada de Vega");
+        video.addTimestamp(9.6, "Gol en contra (2-2)");
+        video.addTimestamp(10.50, "Gol a favor (3-2)");
+        video.addTimestamp(12.42, "Pérdida de balón");
+        video.addTimestamp(13.60, "Conducción Edwin");
+        video.addTimestamp(14.22, "Gol en contra (3-3)");
+        video.addTimestamp(15.20, "Gol a favor (4-3)");
+        video.addTimestamp(16.00, "Putazos");
+        video.addTimestamp(18.43, "Golazo a favor (5-3)", 4);
+        video.addTimestamp(19.57, "Vega se tapa solo");
+        video.addTimestamp(21.30, "Lenta reacción de Vega");
+        video.addTimestamp(21.45, "Gol en contra (5-4)");
+        video.addTimestamp(22.27, "Gol en contra (5-5)", 3);
+        video.addTimestamp(28.29, "Gol a favor (6-5)", 3);
+        video.addTimestamp(29.22, "Max se confía");
+        video.addTimestamp(31.25, "Edwin se confía");
+        video.addTimestamp(33.54, "Gol en contra (6-6)");
+        video.addTimestamp(36.24, "Gol a favor (7-6)");
+        video.addTimestamp(37.00, "Falta (?)");
+        video.addTimestamp(40.24, "Gol en contra (7-7)", 3);
+        video.addTimestamp(41.21, "Falla de Edwin");
+        video.addTimestamp(41.56, "Falla de Carlos");
+        video.addTimestamp(42.50, "Falla defensa");
+        video.addTimestamp(43.09, "Gol a favor (7-8)");
+        video.addTimestamp(45.13, "Gol en contra (8-8)");
+        video.addTimestamp(45.50, "Desacomodadísimos");
+        video.addTimestamp(47.58, "Gol en contra (8-9)");
+        video.addTimestamp(49.30, "Gol a favor (9-9)");
+
+        // Function to format time (converts seconds to MM:SS format)
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        // Function to create timestamp elements
+        function createTimestamps() {
+            const timestampsContainer = document.querySelector('.timestamps');
+            // Update page title
+            document.title = video.title;
+            
+            video.timestamps.forEach(stamp => {
+                const timestampElement = document.createElement('div');
+                timestampElement.className = 'timestamp-item';
+                timestampElement.setAttribute('data-time', stamp.time);
+                timestampElement.textContent = `${formatTime(stamp.time)} - ${stamp.description}`;
+                timestampsContainer.appendChild(timestampElement);
+            });
+        }
+
+        var player;
+        function onYouTubeIframeAPIReady() {
+            const iframe = document.getElementById('youtube-player');
+            iframe.src = video.getEmbedUrl();
+            
+            player = new YT.Player('youtube-player', {
+                events: {
+                    'onReady': onPlayerReady
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            // Create timestamps when player is ready
+            createTimestamps();
+            
+            // Add click handlers to timestamps
+            document.querySelectorAll('.timestamp-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const time = parseInt(this.getAttribute('data-time'));
+                    player.seekTo(time);
+                });
+            });
+
+            // Set up timer to check current timestamp
+            setInterval(updateActiveTimestamp, 100);  // Check every 100ms
+
+            // Add keyboard controls
+            document.addEventListener('keydown', function(e) {
+                const currentTime = player.getCurrentTime();
+                
+                switch(e.key) {
+                    case ' ':
+                        if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+                            player.pauseVideo();
+                        } else {
+                            player.playVideo();
+                        }
+                        e.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                        if (e.shiftKey) {
+                            player.seekTo(currentTime - scrollSpeed * 5, true);
+                            showToast('⏪ 10s');
+                        } else {
+                            player.seekTo(currentTime - scrollSpeed, true);
+                            showToast('⏪ 1 frame');
+                        }
+                        e.preventDefault();
+                        break;
+                        
+                    case 'ArrowRight':
+                        if (e.shiftKey) {
+                            player.seekTo(currentTime + scrollSpeed * 5, true);
+                            showToast('⏩ 10s');
+                        } else {
+                            player.seekTo(currentTime + scrollSpeed, true);
+                            showToast('⏩ 1 frame');
+                        }
+                        e.preventDefault();
+                        break;
+                }
+            });
+        }
+
+        function updateActiveTimestamp() {
+            if (player && player.getCurrentTime) {
+                const currentTime = player.getCurrentTime();
+                const timestamps = document.querySelectorAll('.timestamp-item');
+                let activeTimestamp = null;
+
+                // Find the last timestamp that's less than or equal to current time
+                timestamps.forEach(item => {
+                    const itemTime = parseInt(item.getAttribute('data-time'));
+                    if (itemTime <= currentTime) {
+                        activeTimestamp = item;
+                    }
+                });
+
+                // Remove active class from all timestamps
+                timestamps.forEach(item => item.classList.remove('active'));
+                
+                // Add active class to current timestamp
+                if (activeTimestamp) {
+                    activeTimestamp.classList.add('active');
+                    // Scroll the timestamp into view if it's not visible
+                    const container = document.querySelector('.timestamps');
+                    const itemTop = activeTimestamp.offsetTop;
+                    const containerTop = container.scrollTop;
+                    const containerBottom = containerTop + container.clientHeight;
+                    
+                    if (itemTop < containerTop || itemTop > containerBottom) {
+                        activeTimestamp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            }
+        }
+
+        function showToast(message, duration = 500) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, duration);
+        }
+    </script>
+</body>
+</html>
