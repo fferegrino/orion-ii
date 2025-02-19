@@ -55,6 +55,68 @@
             display: none;
             z-index: 1000;
         }
+
+        /* Add responsive styles */
+        @media (max-width: 1024px) {
+            .container {
+                max-width: 100%;
+                padding: 10px;
+            }
+
+            .video-container {
+                flex: 3;
+            }
+
+            iframe {
+                height: 600px !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .video-container {
+                flex: none;
+            }
+
+            .timestamps {
+                max-height: 300px;
+                width: 100%;
+            }
+
+            iframe {
+                height: 400px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 5px;
+                gap: 10px;
+            }
+
+            iframe {
+                height: 250px !important;
+            }
+
+            .timestamps {
+                max-height: 500px;
+            }
+
+            .timestamp-item {
+                padding: 6px;
+                font-size: 14px;
+            }
+
+            .toast {
+                font-size: 14px;
+                padding: 8px 16px;
+                top: 10px;
+                right: 10px;
+            }
+        }
     </style>
 </head>
 <body>
