@@ -15,6 +15,8 @@
 
         .video-container {
             flex: 4;
+            position: relative;
+            overflow: hidden;
         }
 
         .timestamps {
@@ -54,6 +56,42 @@
             border-radius: 4px;
             display: none;
             z-index: 1000;
+        }
+
+        .zoomed {
+            transform: scale(2);
+        }
+
+        /* Add zoom controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .zoom-controls button {
+            background: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 0 2px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        /* Add styles for the zoom target selector */
+        .zoom-target {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 2px solid red;
+            border-radius: 50%;
+            pointer-events: none;
+            display: none;
+            z-index: 999;
         }
 
         /* Add responsive styles */
@@ -123,6 +161,10 @@
     <!-- https://www.youtube.com/watch?v=MyxAC80XzCA&t=680s -->
     <div class="container">
         <div class="video-container">
+            <div class="zoom-controls">
+                <button onclick="toggleZoom()">Toggle Zoom</button>
+            </div>
+            <div class="zoom-target" id="zoom-target"></div>
             <iframe id="youtube-player" width="100%" height="800" 
                 frameborder="0" 
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
@@ -154,13 +196,21 @@
                 this.timestamps = [];
             }
 
-            addTimestamp(time, description, additionalOffset = 0) {
+            addTimestamp(time, description, options = {}) {
+                const {
+                    additionalOffset = 0,
+                    zoomLevel = 1,
+                    zoomPosition = { x: 50, y: 50 } // Default center position (in percentages)
+                } = options;
+
                 // If time is decimal, the integer part is the minutes and the decimal part is the seconds
                 const minutes = Math.floor(time);
                 const seconds = Math.round((time - minutes) * 100); 
                 this.timestamps.push({
                     time: minutes * 60 + seconds + this.startOffset - (this.playOffset + additionalOffset),
-                    description: description
+                    description: description,
+                    zoomLevel,
+                    zoomPosition
                 });
             }
 
@@ -172,47 +222,52 @@
         // Create video instance
         const video = new VideoData(
             'MyxAC80XzCA',  // video ID
-            'My Video Title',  // title
+            'Orion II vs Bayer Leverkusen',  // title
             290  // start offset in seconds
         );
 
         // Add timestamps relative to video start
-        video.addTimestamp(0, "Inicia el partido");
+        video.addTimestamp(0, "Inicia el partido"); // No zoom (default)
         video.addTimestamp(1.19, "Primer gol (1-0)");
         video.addTimestamp(1.4, "Max la caga");
         video.addTimestamp(2.43, "Segundo gol (2-0)");
-        video.addTimestamp(4.32, "Gol en contra (2-1)", 1);
+        video.addTimestamp(4.32, "Gol en contra (2-1)", { additionalOffset: 1 });
         video.addTimestamp(7.5, "Penal fallado");
         video.addTimestamp(9.35, "Atajada de Vega");
         video.addTimestamp(9.6, "Gol en contra (2-2)");
         video.addTimestamp(10.50, "Gol a favor (3-2)");
         video.addTimestamp(12.42, "Pérdida de balón");
+        video.addTimestamp(13.10, "Gol en contra (3-3)", { additionalOffset: 16 });
         video.addTimestamp(13.60, "Conducción Edwin");
-        video.addTimestamp(14.22, "Gol en contra (3-3)");
-        video.addTimestamp(15.20, "Gol a favor (4-3)");
+        video.addTimestamp(14.22, "Gol en contra (3-4)");
+        video.addTimestamp(15.20, "Gol a favor (4-4)");
         video.addTimestamp(16.00, "Putazos");
-        video.addTimestamp(18.43, "Golazo a favor (5-3)", 4);
+        video.addTimestamp(18.43, "Golazo a favor (5-4)", { additionalOffset: 4 });
         video.addTimestamp(19.57, "Vega se tapa solo");
         video.addTimestamp(21.30, "Lenta reacción de Vega");
-        video.addTimestamp(21.45, "Gol en contra (5-4)");
-        video.addTimestamp(22.27, "Gol en contra (5-5)", 3);
-        video.addTimestamp(28.29, "Gol a favor (6-5)", 3);
+        video.addTimestamp(21.45, "Gol en contra (5-5)");
+        video.addTimestamp(22.27, "Gol en contra (5-6)", { additionalOffset: 3 });
+        video.addTimestamp(28.29, "Gol a favor (6-6)", { additionalOffset: 3 });
         video.addTimestamp(29.22, "Max se confía");
         video.addTimestamp(31.25, "Edwin se confía");
-        video.addTimestamp(33.54, "Gol en contra (6-6)");
-        video.addTimestamp(36.24, "Gol a favor (7-6)");
+        video.addTimestamp(33.54, "Gol en contra (6-7)");
+        video.addTimestamp(36.24, "Gol a favor (7-7)");
         video.addTimestamp(37.00, "Falta (?)");
-        video.addTimestamp(38.51, "Gol en contra (7-7)");
-        video.addTimestamp(40.24, "Gol en contra (7-8)", 3);
+        video.addTimestamp(38.51, "Gol en contra (7-8)");
+        video.addTimestamp(40.24, "Gol en contra (7-9)", { additionalOffset: 3 });
         video.addTimestamp(41.21, "Falla de Edwin");
         video.addTimestamp(41.56, "Falla de Carlos");
         video.addTimestamp(42.50, "Falla defensa");
-        video.addTimestamp(43.09, "Gol a favor (8-8)");
-        video.addTimestamp(45.13, "Gol en contra (8-9)");
+        video.addTimestamp(43.09, "Gol a favor (8-9)");
+        video.addTimestamp(45.13, "Gol en contra (8-10)");
         video.addTimestamp(45.50, "Desacomodadísimos");
-        video.addTimestamp(47.58, "Gol en contra (8-10)");
-        video.addTimestamp(49.30, "Gol a favor (9-10)");
-        video.addTimestamp(53.49, "Carlos se va sin decir adiós");
+        video.addTimestamp(47.58, "Gol en contra (8-11)");
+        video.addTimestamp(49.30, "Gol a favor (9-11)");
+        video.addTimestamp(53.49, "Carlos se va sin decir adiós", {
+            additionalOffset: 1,
+            zoomLevel: 3,
+            zoomPosition: { x: 0, y: 20 } // Zoom in on the left-upper area
+        });
 
         // Function to format time (converts seconds to MM:SS format)
         function formatTime(seconds) {
@@ -253,10 +308,23 @@
             createTimestamps();
             
             // Add click handlers to timestamps
-            document.querySelectorAll('.timestamp-item').forEach(item => {
+            document.querySelectorAll('.timestamp-item').forEach((item, index) => {
                 item.addEventListener('click', function() {
-                    const time = parseInt(this.getAttribute('data-time'));
-                    player.seekTo(time);
+                    const timestamp = video.timestamps[index];
+                    const iframe = document.getElementById('youtube-player');
+                    
+                    // Apply zoom settings
+                    if (timestamp.zoomLevel > 1) {
+                        iframe.style.transformOrigin = `${timestamp.zoomPosition.x}% ${timestamp.zoomPosition.y}%`;
+                        iframe.style.transform = `scale(${timestamp.zoomLevel})`;
+                        iframe.classList.add('zoomed');
+                    } else {
+                        iframe.style.transform = 'none';
+                        iframe.classList.remove('zoomed');
+                    }
+                    
+                    // Seek to timestamp
+                    player.seekTo(timestamp.time);
                 });
             });
 
@@ -341,6 +409,19 @@
             setTimeout(() => {
                 toast.style.display = 'none';
             }, duration);
+        }
+
+        function toggleZoom(level = 2) {
+            const iframe = document.getElementById('youtube-player');
+            if (iframe.classList.contains('zoomed')) {
+                iframe.style.transform = 'none';
+                iframe.classList.remove('zoomed');
+                showToast('🔍 Zoomed Out');
+            } else {
+                iframe.style.transform = `scale(${level})`;
+                iframe.classList.add('zoomed');
+                showToast('🔍 Zoomed In');
+            }
         }
     </script>
 </body>
